@@ -1,0 +1,183 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html dir="ltr" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml" lang="en"><head>
+
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>manuals:daq:wrapper:labview</title>
+<meta name="generator" content="DokuWiki Release rc2009-12-02 &quot;Mulled Wine&quot;">
+<meta name="robots" content="noindex,nofollow">
+<meta name="date" content="2010-01-13T10:43:42+0100">
+<meta name="keywords" content="manuals,daq,wrapper,labview">
+<link rel="search" type="application/opensearchdescription+xml" href="http://wiki.tofwerk.com/lib/exe/opensearch.php" title="Tofwerk Documentation Wiki">
+<link rel="start" href="http://wiki.tofwerk.com/">
+<link rel="contents" href="http://wiki.tofwerk.com/doku.php?id=manuals:daq:wrapper:labview&amp;do=index" title="Index">
+<link rel="alternate" type="application/rss+xml" title="Recent Changes" href="http://wiki.tofwerk.com/feed.php">
+<link rel="alternate" type="application/rss+xml" title="Current Namespace" href="http://wiki.tofwerk.com/feed.php?mode=list&amp;ns=manuals:daq:wrapper">
+<link rel="alternate" type="text/html" title="Plain HTML" href="http://wiki.tofwerk.com/doku.php?do=export_xhtml&amp;id=manuals:daq:wrapper:labview">
+<link rel="alternate" type="text/plain" title="Wiki Markup" href="http://wiki.tofwerk.com/doku.php?do=export_raw&amp;id=manuals:daq:wrapper:labview">
+<link rel="canonical" href="http://wiki.tofwerk.com/doku.php?id=manuals:daq:wrapper:labview">
+<link rel="stylesheet" media="all" type="text/css" href="LVwrapper_files/css_003.css">
+<link rel="stylesheet" media="screen" type="text/css" href="LVwrapper_files/css.css">
+<link rel="stylesheet" media="print" type="text/css" href="LVwrapper_files/css_002.css">
+<script type="text/javascript" charset="utf-8"><!--//--><![CDATA[//><!--
+var NS='manuals:daq:wrapper';var SIG=' --- //[[tanner@tofwerk.com|Christian Tanner]] 13.01.2010 10:47//';var JSINFO = {"id":"manuals:daq:wrapper:labview","namespace":"manuals:daq:wrapper"};
+//--><!]]></script>
+<script type="text/javascript" charset="utf-8" src="LVwrapper_files/js.php"></script>
+</head><body>
+<div class="dokuwiki export">
+
+
+
+<h1><a name="tofdaq_api_wrapper_for_labview" id="tofdaq_api_wrapper_for_labview">TofDaq API wrapper for LabVIEW</a></h1>
+<div class="level1">
+
+<p>
+
+The TofDaq <acronym title="Atmospheric Pressure Interface / Application Programming Interface">API</acronym> wrapper for LabVIEW <sup><a href="#fn__1" name="fnt__1" id="fnt__1" class="fn_top">1)</a></sup>
+is implemented as a collection VIs (virtual instruments) that typically
+call the corresponding C function directly through LabVIEW's Call
+Library Function Node. Most of these functions don't allocate memory
+themselves, but expect the <acronym title="Atmospheric Pressure Interface / Application Programming Interface">API</acronym>
+user to supply buffers, where spectra, profiles and other information
+is written into. For some functions (mainly those that don't deal with
+large amounts of data, for example the <code>GetPeakParameter</code>
+functions) a second version of the VI exists (suffixed with LV) which
+handles allocation of memory buffers within the VI and directly returns
+the expected result in a LabVIEW array or cluster.
+</p>
+
+<p>
+This dual concept is detailed here for the <acronym title="Atmospheric Pressure Interface / Application Programming Interface">API</acronym> function <code>TwReadRawData</code>:
+
+</p>
+<pre class="code c">TOFWERK_H5_API TwRetVal TwReadRawData <span class="br0">(</span><span class="kw4">char</span><span class="sy0">*</span> Filename<span class="sy0">,</span> <span class="kw4">int</span> channel<span class="sy0">,</span> <span class="kw4">int</span> bufIndex<span class="sy0">,</span> <span class="kw4">int</span> writeIndex<span class="sy0">,</span> <span class="kw4">int</span><span class="sy0">*</span> bufferSize<span class="sy0">,</span> <span class="kw4">void</span><span class="sy0">*</span> buffer<span class="br0">)</span><span class="sy0">;</span></pre>
+
+<p>
+This function expects a buffer where the raw data values are read into. The size of this buffer is specified by the variable <code>bufferSize</code> which is passed by reference and holds the actual data size read on function return.
+</p>
+
+<p>
+<code>TwReadRawData.vi</code> is simply a one to one translation of the C function call using LabVIEW's Call Library Function Node: <a href="http://wiki.tofwerk.com/lib/exe/detail.php?id=manuals%3Adaq%3Awrapper%3Alabview&amp;media=manuals:daq:wrapper:lvwrap_readrawdatavi.png" class="media" title="manuals:daq:wrapper:lvwrap_readrawdatavi.png"><img src="LVwrapper_files/fetch.png" class="mediaright" title="TwReadRawData.vi" alt="TwReadRawData.vi" align="right"></a>
+</p>
+
+<p>
+This function by itself is not very convenient to use because for many <acronym title="Data Acquisition">DAQ</acronym>/acquisition
+modes, the size of one buf worth of raw data is not constant. On the
+other hand this same function can be used to query the raw data size
+for any given channel/buf/write combination by calling the function
+with <code>bufferSize</code> pointing to a value of 0 and <code>buffer</code> being a <code>NULL</code> pointer. In this case the no actual data will be copied, but <code>bufferSize</code>
+is set to the minimal buffer size needed to successfully make this
+call. We can take advantage of this behavior by calling the function
+twice as done in <code>TwReadRawDataLV.vi</code>:
+</p>
+
+<p>
+<a href="http://wiki.tofwerk.com/lib/exe/detail.php?id=manuals%3Adaq%3Awrapper%3Alabview&amp;media=manuals:daq:wrapper:lvwrap_readrawdatavi_lv.png" class="media" title="manuals:daq:wrapper:lvwrap_readrawdatavi_lv.png"><img src="LVwrapper_files/fetch_005.png" class="medialeft" title="TwReadRawDataLV.vi" alt="TwReadRawDataLV.vi" align="left"></a>
+</p>
+
+<p>
+The first time the function is called without an initialized data buffer. <code>bufferSize</code> is the used to create an U8 array of the appropriate length which is fed to the function on the second call.
+</p>
+
+<p>
+This makes the VI <code>TwReadRawDataLV.vi</code> much more
+convenient to use: Just specify the data file, raw data channel, buf
+and write indices and directly get an appropriately sized data array as
+output. Note however if you use this VI to loop over many bufs/writes
+in a large dataset, a performance penalty may occur as there are
+happening a lot of memory allocations/deallocations under the hood. In
+such a case it is recommended to fall back to <code>TwReadRawData.vi</code>,
+reuse the allocated buffer in the loop and just check and readjust
+array sizes between function calls for different buf/writes. </p>
+
+</div>
+<!-- SECTION "TofDaq API wrapper for LabVIEW" [1-2914] -->
+<h2><a name="labview_example_application" id="labview_example_application">LabVIEW example application</a></h2>
+<div class="level2">
+
+<p>
+This section shows a small LabView program that executes a sequence of <acronym title="Atmospheric Pressure Interface / Application Programming Interface">API</acronym>
+commands that shows how to register a data source that will be written
+to the data file synchronously to the acquired data (one set of user
+data for every write in this example).
+</p>
+
+<p>
+<a href="http://wiki.tofwerk.com/lib/exe/detail.php?id=manuals%3Adaq%3Awrapper%3Alabview&amp;media=manuals:daq:wrapper:lvwrap_regdataexample.png" class="media" title="manuals:daq:wrapper:lvwrap_regdataexample.png"><img src="LVwrapper_files/fetch_004.png" class="media" title="Registered data example" alt="Registered data example"></a>
+</p>
+
+<p>
+The example checks two preconditions before doing any work: “Is a TofDaq recorder application running?” and “Do arrays <code>initial data</code> and <code>elementDescription</code>
+have the same length?”. If both conditions are satisfied the first
+thing the program does is to unregister the (potentially already
+registered) data source we are going to (re)register. At the same time
+the string array <code>elementDescription</code> is converted into a flat U8 array as needed by the register function(s) by the helper VI <code>StringArray2CharBuffer.vi</code>.
+</p>
+
+<p>
+The actual register step is performed by the VI <code>TwRegisterUserDataWrite.vi</code> (alternatively the VI <code>TwRegisterUserDataBuf.vi</code>
+can be used to get user data stored for every buf). When the data
+source was successfully registered initial values are set by calling
+the VI <code>TwUpdateUserData.vi</code>. At this point in the TofDaq
+configuration dialog's HDF5 tab we can check that the data source is in
+fact registered in TofDaq recorder and the initial values were set
+successfully:
+</p>
+
+<p>
+<a href="http://wiki.tofwerk.com/lib/exe/detail.php?id=manuals%3Adaq%3Awrapper%3Alabview&amp;media=manuals:daq:wrapper:lvwrap_regdatatofdaq.png" class="media" title="manuals:daq:wrapper:lvwrap_regdatatofdaq.png"><img src="LVwrapper_files/fetch_003.png" class="medialeft" title=" TofDaq recorder with registered data source" alt=" TofDaq recorder with registered data source" align="left"></a>
+</p>
+
+<p>
+We can see that a group <code>/TestData</code> will be created to hold the <code>TwData</code> and <code>TwInfo</code> datasets. <code>W</code>
+in the first row indicates that we registered the data source for every
+write, and the last row shows that our data source provides 3 values.
+By clicking on this line we get a more detailed view of the data source
+(shown on the right). The dataset will not be compressed and we see
+that the initial values and descriptions were transferred successfully
+into the TofDaq recorder.
+</p>
+
+<p>
+Executing the <code>TwStartAcquisition.vi</code> VI starts the
+data acquisition and while the acquisition is running we update once a
+second the 3 values of our data source (in this example we multiply the
+initial values with the loop index, you will probably want to make
+something more meaningful). It is important to note that the update
+interval needs not to be matched to the acquisition frequency, the
+TofDaq recorder just writes for every write (or buf) the values from
+the last call to <code>TwUpdateUserData.vi</code>. So if the data
+acquisition is faster than the update interval, the same values will be
+stored several times, whereas for the inverse situation not all values
+transmitted will be stored in the file. If you want to have the data
+stored in your own rhythm, use the <code>TwAddUserData.vi</code> VI.
+However, note that in that case the resulting dataset's dimension will
+not match the dimensions of the acquired data and that it is your
+responsibility to store time stamps with your data (for the registered
+data case this is not necessary because the timing is available through
+the <code>/Timing/BufTimes</code> dataset).
+</p>
+
+<p>
+Once we detect that the acquisition is no longer running (<code>TwDaqActive.vi</code>) we unregister the data source and call <code>TwCleanupDll.vi</code> to leave <acronym title="Dynamic Link Library">DLL</acronym> in a well behaved state.
+</p>
+
+<p>
+<a href="http://wiki.tofwerk.com/lib/exe/detail.php?id=manuals%3Adaq%3Awrapper%3Alabview&amp;media=manuals:daq:wrapper:lvwrap_regdatafile.png" class="media" title="manuals:daq:wrapper:lvwrap_regdatafile.png"><img src="LVwrapper_files/fetch_002.png" class="medialeft" alt="" align="left"></a>
+</p>
+
+<p>
+Looking at the data file this acquisition generates we see that there is indeed the group <code>/TestData</code> with <code>TwData</code> and <code>TwInfo</code> datasets. The contents of these datasets is shown as well. <code>TwInfo</code>
+just holds the 3 labels already shown in the TofDaq recorder
+screenshot. In this example a write period of 600 ms was configured
+whereas our example program updates every 1000 ms. The effect of this
+can be seen in the <code>TwData</code> dataset where some entries hold twice the same numbers and some don't, as expected for this unmatched update rate.
+</p>
+
+</div>
+<!-- SECTION "LabVIEW example application" [2915-] --><div class="footnotes">
+<div class="fn"><sup><a href="#fnt__1" id="fn__1" name="fn__1" class="fn_bot">1)</a></sup> 
+LabVIEW is a registred trademark of National Instruments</div>
+</div>
+</div>
+</body></html>
